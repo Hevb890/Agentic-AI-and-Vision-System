@@ -1,0 +1,8 @@
+
+# Folders git ignored
+venv/
+__pycache__/
+
+#Files git ignored
+.env
+.DS_STORE
