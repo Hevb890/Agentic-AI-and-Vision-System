@@ -1,5 +1,6 @@
 # Agentic-AI-and-Vision-System
 
+``json
 ai-bed-exit-monitor/
 ├── .github/ # CI/CD workflows (linting, testing, docker build)
 │ └── workflows/
