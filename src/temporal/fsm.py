@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional
 
 class ActivityState(str, Enum):
     LYING_IN_BED = "LYING_IN_BED"
-    SITTING_IN_BED = "SITTING_IN_BED"
+    SITTING_ON_BED = "SITTING_ON_BED"
     SITTING_OUTSIDE_BED = "SITTING_OUTSIDE_BED"
     STANDING = "STANDING"
     WALKING = "WALKING"
@@ -30,7 +30,7 @@ class StateMachine:
             if angle <= self.angle_lying_threshold:
                 return ActivityState.LYING_IN_BED
             elif angle > self.angle_lying_threshold:
-                return ActivityState.SITTING_IN_BED
+                return ActivityState.SITTING_ON_BED
 
         else:
             if angle <= self.angle_lying_threshold:
