@@ -59,13 +59,13 @@ class PatientMonitoringPipeline:
         cap.release()
 
         summary = self.duration_engine.get_smmary()
-        bed_exits = self.agent.get_bed_exit_logs()
+        bed_exists = self.agent.get_bed_exit_logs()
         alert_info = self.alerts.evaluate_status(summary["durations_seconds"], bed_exists)
 
         final_payload = OutputFormatter.build_summary(
             durations=summary["durations_seconds"],
             timeline=summary["timeline"],
-            bed_exits=bed_exits,
+            bed_exits=bed_exists,
             alert_info=alert_info,
             video_metadata={"video_path": video_path, "total_frames": frame_idx, "fps": video_fps}
         )
@@ -115,7 +115,12 @@ class PatientMonitoringPipeline:
                 primary_det = next((d for d in detections if d.get("is_primary_subject")), None)
 
                 draft_state = self.fsm.evaluate_frame(primary_det)
-                smoothed_state = self.window_filter.add_and_smooth(draft_state)
+                smoothed_res = self.window_filter.add_and_smooth(draft_state)
+
+                if isinstance(smoothed_res, tuple):
+                    smoothed_state = smoothed_res[0]
+                else:
+                    smoothed_state = smoothed_res
                 self.duration_engine.update(smoothed_state, timestamp_sec)
 
                 self.agent.push_frame(frame)

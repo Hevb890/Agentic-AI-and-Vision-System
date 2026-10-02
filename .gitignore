@@ -6,3 +6,5 @@ __pycache__/
 #Files git ignored
 .env
 .DS_STORE
+yolov8n-pose.pt
+yolov8n.pt

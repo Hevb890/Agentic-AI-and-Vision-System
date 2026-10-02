@@ -12,7 +12,7 @@ class PerceptionPipeline:
     def __init__(self, model_path: str="yolov8n-pose.pit", bed_roi_polygon: Optional[List[Tuple[int, int]]] = None, conf_threshold: float = 0.35, enable_clahe: bool = True):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = YOLO(model_path).to(self.device)
-        self.confidence_threshold = conf_threshold
+        self.conf_threshold = conf_threshold
         self.enable_clahe = enable_clahe
 
         self.bed_detector = BedDetector(roi_polygon=bed_roi_polygon)
@@ -35,7 +35,7 @@ class PerceptionPipeline:
     def process_frame(self, frame: np.ndarray, frame_index: int, timestamp_sec: float) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
         enhanced_frame = self._preprocess_frame(frame)
 
-        if not self.bed_detector.bed_roi is None:
+        if self.bed_detector.bed_roi is None:
             self.bed_detector.auto_detect_bed(enhanced_frame)
             
         results = self.model.track(
