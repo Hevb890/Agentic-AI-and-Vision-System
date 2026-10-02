@@ -15,10 +15,7 @@ class PerceptionPipeline:
         self.confidence_threshold = conf_threshold
         self.enable_clahe = enable_clahe
 
-        defualt_roi = [(200,200), (800,300), (800,800), (200, 800)]
-        roi_points = bed_roi_polygon if bed_roi_polygon is not None else defualt_roi
-
-        self.bed_detector = BedDetector(roi_polygon=roi_points)
+        self.bed_detector = BedDetector(roi_polygon=bed_roi_polygon)
         self.pose_estimator = PoseEstimator(conf_threshold=conf_threshold)
         self.tracker = PersonTracker()
 
@@ -37,6 +34,10 @@ class PerceptionPipeline:
 
     def process_frame(self, frame: np.ndarray, frame_index: int, timestamp_sec: float) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
         enhanced_frame = self._preprocess_frame(frame)
+
+        if not self.bed_detector.bed_roi is None:
+            self.bed_detector.auto_detect_bed(enhanced_frame)
+            
         results = self.model.track(
             enhanced_frame,
             persist=True,

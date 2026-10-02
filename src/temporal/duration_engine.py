@@ -20,10 +20,10 @@ class DurationEngine:
             self.timeline.append(self.current_segment)
             self.current_segment = {"state": state.value, "start_time": timestamp_sec, "end_time": timestamp_sec}
 
-    def finalize(self) -> Dict[str, Any]:
-        if self.current_segment:
+    def get_summary(self) -> Dict[str, Any]:
+        if self.current_segment and self.current_segment not in self.timeline:
             self.timeline.append(self.current_segment)
         return{
-            "activity_duration_sec": {k: round(v,2) for k, v in self.durations.items()},
+            "duration_seconds": {k: round(v,2) for k, v in self.durations.items()},
             "timeline": self.timeline
         }
