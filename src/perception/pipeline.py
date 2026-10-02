@@ -9,7 +9,7 @@ from .tracker import PersonTracker
 from .pose_estimator import PoseEstimator
 
 class PerceptionPipeline:
-    def __init__(self, model_path: str="yolov8n-pose.pit", bed_roi_polygon: Optional[List[Tuple[int, int]]] = None, conf_threshold: float = 0.35, enable_clahe: bool = True):
+    def __init__(self, model_path: str="yolov8n-pose.pt", bed_roi_polygon: Optional[List[Tuple[int, int]]] = None, conf_threshold: float = 0.35, enable_clahe: bool = True):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = YOLO(model_path).to(self.device)
         self.conf_threshold = conf_threshold
@@ -20,7 +20,9 @@ class PerceptionPipeline:
         self.tracker = PersonTracker()
 
         self.clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8,8))
-
+        self.patient_track_id: Optional[int] = None
+        self.frames_since_patient_seen: int = 0
+        self.patient_loss_threshold: int = 900
 
     def _preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         if not self.enable_clahe:
@@ -31,6 +33,10 @@ class PerceptionPipeline:
         l_enhanced = self.clahe.apply(l_channel)
         enhanced_lab = cv2.merge((l_enhanced, a_channel, b_channel))
         return cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+
+    def reanchor_patient_id(self, new_track_id: Optional[int] = None):
+        self.patient_track_id = new_track_id
+        self.frames_since_patient_seen = 0
 
     def process_frame(self, frame: np.ndarray, frame_index: int, timestamp_sec: float) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
         enhanced_frame = self._preprocess_frame(frame)
@@ -59,11 +65,40 @@ class PerceptionPipeline:
                 track_ids = np.arange(len(boxes))
 
             keypoints_data = results[0].keypoints.data.cpu().numpy()  
-            primary_flags = self.tracker.filter_primary_subject(track_ids)
-
-            for bbox, track_id, kpts, is_primary in zip(boxes, track_ids, keypoints_data, primary_flags):
-                torso_angle, torso_conf = self.pose_estimator.calculate_torso_angle(kpts)
+            
+            raw_detections = []
+            for bbox, track_id, kpts in zip(boxes, track_ids, keypoints_data):
                 spatial_info = self.bed_detector.check_overlap(bbox, kpts, conf_thresh=self.conf_threshold)
+                raw_detections.append({
+                    "bbox": bbox,
+                    "track_id": track_id,
+                    "kpts": kpts,
+                    "spatial_info": spatial_info
+                })
+
+            if self.patient_track_id is None and len(raw_detections) > 0:
+                bed_candidates = [
+                    d for d in raw_detections 
+                    if d["spatial_info"]["bed_overlap_ratio"] > 0.30 or d["spatial_info"]["center_in_bed"]
+                ]
+                if bed_candidates:
+                    best_candidate = max(bed_candidates, key=lambda x: x["spatial_info"]["bed_overlap_ratio"])
+                    self.patient_track_id = int(best_candidate["track_id"])
+
+            patient_found = False
+
+            for det in raw_detections:
+                bbox = det["bbox"]
+                track_id = det["track_id"]
+                kpts = det["kpts"]
+                spatial_info = det["spatial_info"]
+
+                is_primary = (track_id == self.patient_track_id)
+                if is_primary:
+                    patient_found = True
+                    self.frames_since_patient_seen = 0
+
+                torso_angle, torso_conf = self.pose_estimator.calculate_torso_angle(kpts)
                 overall_conf = float(np.mean(kpts[:, 2]))
 
                 det_record = {
@@ -81,7 +116,7 @@ class PerceptionPipeline:
                 }
 
                 detections.append(det_record)
-                color = (0, 255, 0) if is_primary else (255, 165, 0)
+                color = (0, 255, 0) if is_primary else (0, 165, 255)
                 cv2.rectangle(
                     annotated_frame,
                     (int(bbox[0]), int(bbox[1])),
@@ -100,5 +135,14 @@ class PerceptionPipeline:
                     (int(bbox[0]), int(bbox[1]) - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2
                 )
+
+            if not patient_found and self.patient_track_id is not None:
+                self.frames_since_patient_seen += 1
+                if self.frames_since_patient_seen > self.patient_loss_threshold:
+                    self.patient_track_id = None
+                    self.frames_since_patient_seen = 0
+
+        status_text = f"Patient ID: {self.patient_track_id if self.patient_track_id is not None else 'SEARCHING...'}"
+        cv2.putText(annotated_frame, status_text, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
         return annotated_frame, detections

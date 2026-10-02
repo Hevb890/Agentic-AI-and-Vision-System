@@ -60,10 +60,10 @@ class PatientMonitoringPipeline:
 
         summary = self.duration_engine.get_smmary()
         bed_exists = self.agent.get_bed_exit_logs()
-        alert_info = self.alerts.evaluate_status(summary["durations_seconds"], bed_exists)
+        alert_info = self.alerts.evaluate_status(summary["duration_seconds"], bed_exists)
 
         final_payload = OutputFormatter.build_summary(
-            durations=summary["durations_seconds"],
+            durations=summary["duration_seconds"],
             timeline=summary["timeline"],
             bed_exits=bed_exists,
             alert_info=alert_info,
@@ -155,10 +155,10 @@ class PatientMonitoringPipeline:
             cv2.destroyAllWindows()
         summary = self.duration_engine.get_summary()
         bed_exits = self.agent.get_bed_exit_logs()
-        alert_info = self.alerts.evaluate_status(summary["durations_seconds"], bed_exits)
+        alert_info = self.alerts.evaluate_status(summary["duration_seconds"], bed_exits)
 
         final_payload = OutputFormatter.build_summary(
-            durations=summary["durations_seconds"],
+            durations=summary["duration_seconds"],
             timeline=summary["timeline"],
             bed_exits=bed_exits,
             alert_info=alert_info,
