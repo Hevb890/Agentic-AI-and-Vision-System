@@ -58,7 +58,7 @@ class PatientMonitoringPipeline:
 
         cap.release()
 
-        summary = self.duration_engine.get_smmary()
+        summary = self.duration_engine.get_summary()
         bed_exists = self.agent.get_bed_exit_logs()
         alert_info = self.alerts.evaluate_status(summary["duration_seconds"], bed_exists)
 
@@ -124,11 +124,15 @@ class PatientMonitoringPipeline:
                 self.duration_engine.update(smoothed_state, timestamp_sec)
 
                 self.agent.push_frame(frame)
-                self.agent.inspect_transition(
+                agent_decision = self.agent.inspect_transition(
                     current_state=smoothed_state,
                     timestamp_sec=timestamp_sec,
-                    detection_record=primary_det
+                    detection_records=detections,
+                    patient_track_id=self.perception_pipeline.patient_track_id
                 )
+
+                if agent_decision["caregiver_present"]:
+                    logger.info("Caregiver presence verified by VLM: Suppressing unassisted bed-exit alert.")
 
                 cv2.putText(
                     annotated_frame, f"STATE: {smoothed_state} | TIME: {timestamp_sec:.1f}s", 

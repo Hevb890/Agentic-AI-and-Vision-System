@@ -7,7 +7,7 @@ from openai import OpenAI
 
 class VLMClient:
     def __init__(self, api_key: Optional[str] = None, model_name: str = "gpt-4o-mini"):
-        self.api_key = api_key
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model_name = model_name
         self.client = OpenAI(api_key=self.api_key) if self.api_key else None
 
@@ -20,6 +20,7 @@ class VLMClient:
             return{
                 "verified": False,
                 "confidence": 0.0,
+                "caregiver_present": False,
                 "reasoning": "OpenAI API key is missing: Skipping VLM verification.",
                 "confirmed_state": "UNKNOWN"
             }
@@ -54,13 +55,15 @@ class VLMClient:
             return {
                 "verified": False,
                 "confidence": 0.0,
+                "caregiver_present": False,
                 "reasoning": f"VLM API Call Failed: {str(e)}",
                 "confirmed_state": "UNKNOWN"
             }
 
     def _parse_vlm_response(self, response_text: str) -> Dict[str, Any]:
         text = response_text.upper()
-        verified = "YES" in text or "VERIFIED" in text
+        verified = ("VERIFIED: YES" in text) or ("VERIFIED:YES" in text)
+        caregiver_present = ("CAREGIVER_PRESENT: YES" in text) or ("CAREGIVER_PRESENT:YES" in text)
         
         confirmed_state = "UNKNOWN"
         if "BED_EXIT" in text or "OUT_OF_BED" in text:
@@ -73,6 +76,7 @@ class VLMClient:
         return {
             "verified": verified,
             "raw_response": response_text,
+            "caregiver_present": caregiver_present,
             "confirmed_state": confirmed_state
         }
         
