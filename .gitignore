@@ -2,6 +2,7 @@
 # Folders git ignored
 venv/
 __pycache__/
+data/
 
 #Files git ignored
 .env

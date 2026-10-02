@@ -4,7 +4,8 @@ from typing import List, Tuple, Any, Dict, Optional
 from ultralytics import YOLO
 
 class BedDetector:
-    def __init__(self, roi_polygon: Optional[List[Tuple[int, int]]] = None):
+    def __init__(self, roi_polygon: Optional[List[Tuple[int, int]]] = None, model_path: str = "yolov8n.pt"):
+        self.model = YOLO(model_path)
         if roi_polygon is not None:
             self.bed_roi = np.array(roi_polygon, np.int32)
         else:
@@ -18,9 +19,8 @@ class BedDetector:
             padding_ratio: float = 0.10
     ) -> np.ndarray:
         h, w, _ = frame.shape
-        model = YOLO(model_path)
 
-        results = model.predict(source=frame, classes = [59], conf=conf_thresh, verbose = False)
+        results = self.model.predict(source=frame, classes = [59], conf=conf_thresh, verbose = False)
 
         if len(results[0].boxes) > 0:
             best_box = max(results[0].boxes, key=lambda b: float(b.conf[0]))

@@ -12,6 +12,6 @@ if __name__ == "__main__":
     # Start live feed using MacBook webcam (camera_index=0)
     pipeline.process_live_stream(
         camera_index=0,
-        output_video_path="recorded_patient_session.mp4",
-        output_json_path="session_summary.json"
+        output_video_path="data/raw_videos/recorded_patient_session.mp4",
+        output_json_path="data/processed_data/session_summary.json"
     )

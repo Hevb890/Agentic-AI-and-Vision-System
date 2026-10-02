@@ -138,10 +138,14 @@ class PatientMonitoringPipeline:
                 out_writer.write(annotated_frame)
 
                 cv2.imshow("MacBook Live Patient Monitor", annotated_frame)
+                key = cv2.waitKey(1) & 0xFF
 
+                if key == ord('r'):
+                    logger.info("Recalibrating Bed ROI via 'r' key command...")
+                    self.perception_pipeline.bed_detector.auto_detect_bed(frame)
                 frame_idx += 1
 
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                if key == ord('q'):
                     logger.info("User requested stop via 'q' key.")
                     break
 
@@ -149,7 +153,7 @@ class PatientMonitoringPipeline:
             cap.release()
             out_writer.release()
             cv2.destroyAllWindows()
-        summary = self.duration_engine.get_smmary()
+        summary = self.duration_engine.get_summary()
         bed_exits = self.agent.get_bed_exit_logs()
         alert_info = self.alerts.evaluate_status(summary["durations_seconds"], bed_exits)
 
