@@ -1,7 +1,7 @@
 from typing import List, Any, Dict
 
 class AlertRulesEngine:
-    def __init__(self, prolonged_sitting_threshold: float = 300.0, out_of_bed_alert_threshold: float = 60.0):
+    def __init__(self, prolonged_sitting_threshold: float = 60.0, out_of_bed_alert_threshold: float = 60.0):
         self.prolonged_sitting_threshold_sec = prolonged_sitting_threshold
         self.out_of_bed_threshold = out_of_bed_alert_threshold
 
